@@ -68,6 +68,38 @@ Env vars:
 
 **Note:** Gemini models can't produce transparent PNGs. The provider automatically replaces "transparent background" in prompts with a chroma-key green (#00FF00) background for easy removal in post-processing.
 
+### PixelLab
+
+Purpose-built **pixel art** generation via [pixellab.ai](https://pixellab.ai). Supports transparent backgrounds natively.
+
+1. Create an account at [pixellab.ai](https://pixellab.ai)
+2. Get your API token from [account settings](https://pixellab.ai/account)
+3. Set `PIXELLAB_API_KEY` in `.env`
+4. Run with `--provider pixellab`
+
+| Model | Endpoint | Max Size | Notes |
+|---|---|---|---|
+| `pixflux` (default) | `/generate-image-pixflux` | 400×400 | General text-to-pixel-art |
+| `bitforge` | `/generate-image-bitforge` | 200×200 | Style-guided, supports style images |
+
+Env vars:
+- `PIXELLAB_API_KEY` — Required
+- `PIXELLAB_MODEL` — Optional, `pixflux` (default) or `bitforge`
+
+Smart features:
+- **Transparent backgrounds** — uses `no_background: true` natively (no green screen needed)
+- **Direction extraction** — detects "Facing right" → `east`, "Facing left" → `west` from prompts
+- **Detail level** — extracts detail hints from prompt text
+- **Outline style** — detects outline preferences (lineless, black outline, etc.)
+- **Prompt cleanup** — strips redundant pixel-art instructions (PixelLab already knows it's pixel art)
+- **Auto-clamp** — scales oversized dimensions down while preserving aspect ratio
+
+Additional endpoints available (not yet integrated, require reference images):
+- `POST /animate-with-text` — text-driven animation frames (64×64)
+- `POST /animate-with-skeleton` — skeleton-based animation
+- `POST /rotate` — rotate characters/objects
+- `POST /inpaint` — edit existing pixel art
+
 ### Adding a New Provider
 
 1. Create `src/providers/your-provider.ts` implementing `ImageProvider`:
@@ -148,4 +180,5 @@ src/
   providers/
     index.ts         Provider registry
     gemini.ts        Google Gemini / Imagen 3
+    pixellab.ts      PixelLab (pixflux + bitforge)
 ```

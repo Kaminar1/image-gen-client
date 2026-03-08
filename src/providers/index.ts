@@ -1,9 +1,11 @@
 import type { ImageProvider } from "../types.js";
 import { GeminiProvider } from "./gemini.js";
+import { PixelLabProvider } from "./pixellab.js";
 
 /** Registry of available providers. Add new providers here. */
 const providerFactories: Record<string, () => ImageProvider> = {
     gemini: () => new GeminiProvider(),
+    pixellab: () => new PixelLabProvider(),
     // stability: () => new StabilityProvider(),
     // dalle:     () => new DalleProvider(),
     // comfyui:   () => new ComfyUIProvider(),
