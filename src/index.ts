@@ -38,16 +38,16 @@ OPTIONS
 
 EXAMPLES
   # Dry run to see what's in the file
-  npx tsx src/index.ts --dry-run plans/projectname/art-prompts.md
+  npx tsx src/index.ts --dry-run plans/eradicate/art-prompts.md
 
   # Generate all character sprites
-  npx tsx src/index.ts --categories "Characters" plans/projectname/art-prompts.md
+  npx tsx src/index.ts --categories "Characters" plans/eradicate/art-prompts.md
 
   # Generate specific assets
-  npx tsx src/index.ts --ids CHR-01,CHR-02,ICN-05 plans/projectname/art-prompts.md
+  npx tsx src/index.ts --ids CHR-01,CHR-02,ICN-05 plans/eradicate/art-prompts.md
 
   # Use a different provider
-  npx tsx src/index.ts --provider stability plans/projectname/art-prompts.md
+  npx tsx src/index.ts --provider stability plans/eradicate/art-prompts.md
 `);
 }
 
@@ -140,7 +140,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Infer a project name from the input file path.
- * e.g. "plans/projectname/art-prompts.md" → "projectname"
+ * e.g. "plans/eradicate/art-prompts.md" → "eradicate"
  */
 function inferProject(inputFile: string): string {
     const parts = resolve(inputFile).split(/[\\/]/);

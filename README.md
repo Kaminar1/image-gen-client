@@ -13,22 +13,22 @@ cp .env.example .env
 # Edit .env → set GEMINI_API_KEY
 
 # Preview what would be generated (no API calls)
-npx tsx src/index.ts --dry-run ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts --dry-run ../../plans/eradicate/art-prompts.md
 
 # List all prompts in the file
-npx tsx src/index.ts --list ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts --list ../../plans/eradicate/art-prompts.md
 
 # Generate all images
-npx tsx src/index.ts ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts ../../plans/eradicate/art-prompts.md
 
 # Generate specific assets
-npx tsx src/index.ts --ids CHR-01,CHR-02,ICN-05 ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts --ids CHR-01,CHR-02,ICN-05 ../../plans/eradicate/art-prompts.md
 
 # Generate by category
-npx tsx src/index.ts --categories "Characters,Boss" ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts --categories "Characters,Boss" ../../plans/eradicate/art-prompts.md
 
 # Force overwrite existing
-npx tsx src/index.ts --force --ids CHR-01 ../../plans/projectname/art-prompts.md
+npx tsx src/index.ts --force --ids CHR-01 ../../plans/eradicate/art-prompts.md
 ```
 
 ## Options
@@ -49,15 +49,24 @@ npx tsx src/index.ts --force --ids CHR-01 ../../plans/projectname/art-prompts.md
 
 ### Gemini (Google AI Studio)
 
-Uses **Imagen 3** via the Generative Language API.
+Supports both **Gemini** and **Imagen** models via Google AI Studio.
 
 1. Get an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 2. Set `GEMINI_API_KEY` in `.env`
 3. Run with `--provider gemini` (default)
 
+The provider auto-detects the endpoint based on the model name:
+
+| Model | Endpoint | Notes |
+|---|---|---|
+| `gemini-2.0-flash-exp` (default) | `:generateContent` | Sends `responseModalities: ["IMAGE"]` + `imageConfig` with aspect ratio & size |
+| `imagen-3.0-generate-002` | `:predict` | Uses `instances/parameters` format with `aspectRatio` + `outputOptions` |
+
 Env vars:
 - `GEMINI_API_KEY` — Required
-- `GEMINI_MODEL` — Optional, defaults to `imagen-3.0-generate-002`
+- `GEMINI_MODEL` — Optional, defaults to `gemini-2.0-flash-exp`
+
+**Note:** Gemini models can't produce transparent PNGs. The provider automatically replaces "transparent background" in prompts with a chroma-key green (#00FF00) background for easy removal in post-processing.
 
 ### Adding a New Provider
 
@@ -121,7 +130,7 @@ It extracts:
 
 ```
 assets/
-  projectname/
+  eradicate/
     CHR-01.png
     CHR-02.png
     ICN-01.png
