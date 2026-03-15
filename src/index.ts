@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { resolve, join, dirname } from "node:path";
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { config as loadEnv } from "dotenv";
 import { parsePromptsFile } from "./parser.js";
 import { createProvider, listProviders } from "./providers/index.js";
+import { removeChromaKey } from "./postprocess/chroma-key.js";
 import type { RunOptions, ParsedPrompt } from "./types.js";
 import { fileURLToPath } from "node:url";
 
@@ -33,6 +34,9 @@ OPTIONS
   --dry-run             Preview what would be generated (no API calls)
   --delay <ms>          Delay between API calls (default: 1000)
   --samples <n>         Images per prompt (default: 1)
+  --remove-bg           Remove #00FF00 green background after generation
+  --bg-tolerance <n>    Chroma-key hard cutoff distance (default: 60)
+  --bg-soft-edge <n>    Soft-edge band width (default: 30)
   --list                List all prompts found in the file and exit
   --help                Show this help
 
@@ -48,6 +52,12 @@ EXAMPLES
 
   # Use a different provider
   npx tsx src/index.ts --provider stability plans/eradicate/art-prompts.md
+
+  # Generate with automatic green-screen removal
+  npx tsx src/index.ts --remove-bg plans/eradicate/art-prompts.md
+
+  # Remove green background from already-generated images
+  npx tsx src/strip-bg.ts assets/eradicate/
 `);
 }
 
@@ -66,6 +76,9 @@ function parseArgs(argv: string[]): RunOptions {
     };
 
     let listMode = false;
+    let removeBg = false;
+    let bgTolerance = 60;
+    let bgSoftEdge = 30;
     let i = 0;
     while (i < args.length) {
         const arg = args[i];
@@ -98,6 +111,15 @@ function parseArgs(argv: string[]): RunOptions {
             case "--samples":
                 opts.sampleCount = parseInt(args[++i], 10);
                 break;
+            case "--remove-bg":
+                removeBg = true;
+                break;
+            case "--bg-tolerance":
+                bgTolerance = parseInt(args[++i], 10);
+                break;
+            case "--bg-soft-edge":
+                bgSoftEdge = parseInt(args[++i], 10);
+                break;
             case "--list":
                 listMode = true;
                 break;
@@ -117,8 +139,14 @@ function parseArgs(argv: string[]): RunOptions {
         process.exit(1);
     }
 
-    // @ts-expect-error - Smuggle list mode through
+    // @ts-expect-error - Smuggle extra modes through
     opts._listMode = listMode;
+    // @ts-expect-error
+    opts._removeBg = removeBg;
+    // @ts-expect-error
+    opts._bgTolerance = bgTolerance;
+    // @ts-expect-error
+    opts._bgSoftEdge = bgSoftEdge;
 
     return opts;
 }
@@ -259,9 +287,25 @@ async function main(): Promise<void> {
             });
 
             await writeFile(outPath, result.data);
-            console.log(
-                `          ✓ Saved ${outPath} (${(result.data.length / 1024).toFixed(1)} KB)`
-            );
+
+            // @ts-expect-error - smuggled option
+            if (opts._removeBg) {
+                const raw = await readFile(outPath);
+                const cleaned = await removeChromaKey(raw, {
+                    // @ts-expect-error
+                    tolerance: opts._bgTolerance,
+                    // @ts-expect-error
+                    softEdge: opts._bgSoftEdge,
+                });
+                await writeFile(outPath, cleaned);
+                console.log(
+                    `          ✓ Saved ${outPath} (${(cleaned.length / 1024).toFixed(1)} KB, bg removed)`
+                );
+            } else {
+                console.log(
+                    `          ✓ Saved ${outPath} (${(result.data.length / 1024).toFixed(1)} KB)`
+                );
+            }
             generated++;
 
             // Rate limit delay (skip after last)

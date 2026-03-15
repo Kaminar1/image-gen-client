@@ -27,8 +27,14 @@ npx tsx src/index.ts --ids CHR-01,CHR-02,ICN-05 ../../plans/eradicate/art-prompt
 # Generate by category
 npx tsx src/index.ts --categories "Characters,Boss" ../../plans/eradicate/art-prompts.md
 
-# Force overwrite existing
-npx tsx src/index.ts --force --ids CHR-01 ../../plans/eradicate/art-prompts.md
+# Generate with automatic green-screen removal
+npx tsx src/index.ts --remove-bg ../../plans/eradicate/art-prompts.md
+
+# Remove green background from already-generated images
+npx tsx src/strip-bg.ts assets/eradicate/
+
+# Remove green BG but keep originals (saves alongside as _clean.png)
+npx tsx src/strip-bg.ts --suffix _clean assets/eradicate/
 ```
 
 ## Options
@@ -43,6 +49,9 @@ npx tsx src/index.ts --force --ids CHR-01 ../../plans/eradicate/art-prompts.md
 | `--dry-run` | `false` | Preview without API calls |
 | `--delay <ms>` | `1000` | Delay between API calls |
 | `--samples <n>` | `1` | Images per prompt |
+| `--remove-bg` | `false` | Remove #00FF00 green background after generation |
+| `--bg-tolerance <n>` | `60` | Chroma-key hard cutoff distance (0-441) |
+| `--bg-soft-edge <n>` | `30` | Soft-edge blending band width |
 | `--list` | — | List all prompts and exit |
 
 ## Providers
@@ -66,7 +75,7 @@ Env vars:
 - `GEMINI_API_KEY` — Required
 - `GEMINI_MODEL` — Optional, defaults to `gemini-2.0-flash-exp`
 
-**Note:** Gemini models can't produce transparent PNGs. The provider automatically replaces "transparent background" in prompts with a chroma-key green (#00FF00) background for easy removal in post-processing.
+**Note:** Gemini models can't produce transparent PNGs. The provider automatically replaces "transparent background" in prompts with a chroma-key green (#00FF00) background. Use `--remove-bg` during generation or `strip-bg` afterwards to convert green → transparent.
 
 ### PixelLab
 
@@ -99,6 +108,47 @@ Additional endpoints available (not yet integrated, require reference images):
 - `POST /animate-with-skeleton` — skeleton-based animation
 - `POST /rotate` — rotate characters/objects
 - `POST /inpaint` — edit existing pixel art
+
+## Green Background Removal (strip-bg)
+
+Gemini generates with a green chroma-key (#00FF00) background since it can't produce transparency. Two ways to remove it:
+
+### During generation
+
+```bash
+npx tsx src/index.ts --remove-bg ../../plans/eradicate/art-prompts.md
+```
+
+This generates images and immediately strips the green background in one pass.
+
+### After generation (batch)
+
+```bash
+# Remove green BG from all PNGs in a folder (overwrites in-place)
+npx tsx src/strip-bg.ts assets/eradicate/
+
+# Preview what would be processed
+npx tsx src/strip-bg.ts --dry-run assets/eradicate/
+
+# Keep originals, save cleaned versions with a suffix
+npx tsx src/strip-bg.ts --suffix _clean assets/eradicate/
+
+# Process specific files with custom tolerance
+npx tsx src/strip-bg.ts --tolerance 80 --soft-edge 20 assets/eradicate/CHR-01.png
+
+# Remove a different colour (e.g. magenta)
+npx tsx src/strip-bg.ts --colour "#FF00FF" assets/eradicate/
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--colour <hex>` | `#00FF00` | Key colour to remove |
+| `--tolerance <n>` | `60` | Hard cutoff distance in RGB space (0-441) |
+| `--soft-edge <n>` | `30` | Soft-edge blending band for smooth edges |
+| `--suffix <text>` | — | Save as `<name><suffix>.png` instead of overwriting |
+| `--dry-run` | `false` | List files without processing |
+
+**How it works:** For each pixel, it computes the Euclidean distance in RGB space from the key colour. Pixels within `tolerance` become fully transparent. Pixels between `tolerance` and `tolerance + soft-edge` get proportional alpha for smooth edges. Everything else stays as-is.
 
 ### Adding a New Provider
 
@@ -175,10 +225,13 @@ assets/
 ```
 src/
   index.ts           CLI entry point, arg parsing, orchestration
+  strip-bg.ts        Standalone green-background removal CLI
   parser.ts          Markdown → ParsedPrompt[] parser
   types.ts           Shared interfaces
   providers/
     index.ts         Provider registry
     gemini.ts        Google Gemini / Imagen 3
     pixellab.ts      PixelLab (pixflux + bitforge)
+  postprocess/
+    chroma-key.ts    Green-screen removal (sharp-based)
 ```
